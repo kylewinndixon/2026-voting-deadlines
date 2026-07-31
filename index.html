@@ -59,11 +59,14 @@ h1 {
 
 .modal-content {
   background:white;
-  margin:10% auto;
+  margin:5% auto;
   padding:25px;
   width:80%;
   max-width:600px;
+  max-height:75vh;
+  overflow-y:auto;
   border-radius:10px;
+
 }
 
 .close {
@@ -187,15 +190,25 @@ let calendar =
 new FullCalendar.Calendar(calendarEl, {
 
 
-initialView:"dayGridMonth",
+initialView:"multiMonth",
 
 initialDate:"2026-09-01",
+
+multiMonthMaxColumns:3,
+
+multiMonthMinWidth:300,
+
+views:{
+    multiMonth:{
+        duration:{months:3}
+    }
+},
 
 
 events:Object.keys(deadlineData).map(date=>({
 
 title:
-Object.keys(deadlineData[date]).join(", "),
+Object.keys(deadlineData[date]).join("\n"),
 
 start:date,
 
@@ -206,6 +219,14 @@ details:deadlineData[date]
 
 })),
 
+  eventContent:function(arg){
+
+return {
+    html:
+    arg.event.title.replace(/\n/g,"<br>")
+};
+
+},
 
 eventClick:function(info){
 
