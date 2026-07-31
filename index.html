@@ -1,378 +1,428 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <title>Voter Registration Deadlines</title>
 
-<title>Voter Registration Deadlines</title>
+    <!-- Calendar library -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
 
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
-
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-<style>
-
-body {
-
-  font-family: Arial, sans-serif;
-
-  margin:20px;
-
-  background:#F2EEDF;
-
-  color:#1F2430;
-
-}
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 
-#calendar-container {
+    <style>
 
-  max-width:1200px;
+        /* =========================
+           Site Colors
+        ========================= */
 
-  margin:auto;
-
-}
-
-
-.month-calendar {
-
-  background:white;
-
-  padding:20px;
-
-  margin-bottom:35px;
-
-  border-radius:15px;
-
-}
-
-h1 {
-  text-align:center;
-  color:#C92535;
-}
-
-#calendar {
-  max-width:1200px;
-  margin:auto;
-}
+        :root {
+            --cream: #F2EEDF;
+            --blue: #5D8AA8;
+            --red: #DE5452;
+            --gold: #F4B942;
+            --charcoal: #1F2430;
+            --muted-text: #505761;
+        }
 
 
-/* registration colors */
+        /* =========================
+           Main Layout
+        ========================= */
 
-.online {
-  background:#C92535;
-}
-
-.mail {
-  background:#D9A441;
-}
-
-.inperson {
-  background:#333333;
-}
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: var(--cream);
+            color: var(--charcoal);
+        }
 
 
-/* popup */
-
-.modal {
-  display:none;
-  position:fixed;
-  z-index:1000;
-  left:0;
-  top:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,.5);
-}
-
-.modal-content {
-  background:white;
-  margin:5% auto;
-  padding:25px;
-  width:80%;
-  max-width:600px;
-  max-height:75vh;
-  overflow-y:auto;
-  border-radius:10px;
-
-}
-
-.close {
-  float:right;
-  font-size:24px;
-  cursor:pointer;
-}
+        #calendar-container {
+            max-width: 1200px;
+            margin: auto;
+        }
 
 
-.badge {
-  color:white;
-  padding:4px 8px;
-  border-radius:5px;
-  margin-right:5px;
-  font-size:12px;
-}
-
-.fc {
-
-  --fc-border-color:#D8D3C4;
-
-}
+        .month-calendar {
+            background: white;
+            padding: 20px;
+            margin-bottom: 35px;
+            border-radius: 15px;
+        }
 
 
-.fc-toolbar-title {
+        /* =========================
+           Popup Window
+        ========================= */
 
-  color:#1F2430;
-
-}
-
-
-.fc-daygrid-day-number {
-
-  color:#505761;
-
-}
-
-
-.fc-event {
-
-  background:#5D8AA8;
-
-  border:none;
-
-}
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,.5);
+        }
 
 
-.fc-event:hover {
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 25px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 75vh;
+            overflow-y: auto;
+            border-radius: 10px;
+        }
 
-  background:#DE5452;
 
-}
+        .close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
 
 
-.fc-day-today {
+        /* =========================
+           Registration Type Colors
+        ========================= */
 
-  background:#F2EEDF !important;
+        .online {
+            background: var(--red);
+        }
 
-}
 
-</style>
+        .mail {
+            background: var(--gold);
+        }
+
+
+        .inperson {
+            background: var(--charcoal);
+        }
+
+
+        .badge {
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+
+        /* =========================
+           Calendar Styling
+        ========================= */
+
+        .fc {
+            --fc-border-color: #D8D3C4;
+        }
+
+
+        .fc-daygrid-day-number {
+            color: var(--muted-text);
+        }
+
+
+        .fc-event {
+            background: var(--blue);
+            border: none;
+        }
+
+
+        .fc-event:hover {
+            background: var(--red);
+        }
+
+
+        .fc-day-today {
+            background: var(--cream) !important;
+        }
+
+    </style>
 
 </head>
 
 
 <body>
 
-<div id="calendar-container">
 
-<div id="september"></div>
+    <!-- Three month calendars -->
 
-<div id="october"></div>
+    <div id="calendar-container">
 
-<div id="november"></div>
+        <div id="september"></div>
 
-</div>
+        <div id="october"></div>
+
+        <div id="november"></div>
+
+    </div>
 
 
-<div id="popup" class="modal">
 
-<div class="modal-content">
+    <!-- Popup -->
 
-<span class="close">&times;</span>
+    <div id="popup" class="modal">
 
-<div id="popupText"></div>
+        <div class="modal-content">
 
-</div>
+            <span class="close">&times;</span>
 
-</div>
+            <div id="popupText"></div>
+
+        </div>
+
+    </div>
 
 
 
 <script>
 
-
-const csvURL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
-
-
-
-let deadlineData = {};
+    // =========================
+    // Load spreadsheet data
+    // =========================
 
 
-
-Papa.parse(csvURL, {
-
-download:true,
-
-header:true,
-
-complete:function(results){
+    const csvURL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
 
 
-results.data.forEach(row=>{
+    let deadlineData = {};
 
 
-if(!row.State || !row.Deadline) return;
+    Papa.parse(csvURL, {
+
+        download: true,
+
+        header: true,
 
 
-let date =
-new Date(row.Deadline);
+        complete: function(results) {
+
+
+            results.data.forEach(row => {
+
+
+                if (!row.State || !row.Deadline) {
+                    return;
+                }
+
+
+                let date = new Date(row.Deadline);
+
+                let key = date.toISOString().split("T")[0];
+
+
+                if (!deadlineData[key]) {
+                    deadlineData[key] = {};
+                }
+
+
+                if (!deadlineData[key][row.State]) {
+                    deadlineData[key][row.State] = [];
+                }
+
+
+                deadlineData[key][row.State].push(row);
+
+
+            });
+
+
+            createCalendar();
+
+        }
+
+    });
 
 
 
-let key =
-date.toISOString().split("T")[0];
+    // =========================
+    // Create calendars
+    // =========================
+
+
+    function createCalendar() {
+
+
+        let months = [
+
+            {
+                id: "september",
+                date: "2026-09-01"
+            },
+
+            {
+                id: "october",
+                date: "2026-10-01"
+            },
+
+            {
+                id: "november",
+                date: "2026-11-01"
+            }
+
+        ];
 
 
 
-if(!deadlineData[key]){
-deadlineData[key]={};
-}
+        months.forEach(month => {
+
+
+            let calendar =
+            new FullCalendar.Calendar(
+
+                document.getElementById(month.id),
+
+                {
+
+
+                    initialView: "dayGridMonth",
+
+                    initialDate: month.date,
+
+
+                    headerToolbar: false,
+
+                    height: "auto",
+
+                    dayMaxEvents: true,
 
 
 
-if(!deadlineData[key][row.State]){
-deadlineData[key][row.State]=[];
-}
+                    events: Object.keys(deadlineData).map(date => ({
+
+
+                        title:
+                        Object.keys(deadlineData[date]).join("\n"),
+
+
+                        start: date,
+
+
+                        extendedProps: {
+
+                            details: deadlineData[date]
+
+                        }
+
+
+                    })),
 
 
 
-deadlineData[key][row.State].push(row);
+                    eventContent: function(arg) {
 
 
-});
+                        return {
+
+                            html:
+                            arg.event.title.replace(/\n/g, "<br>")
+
+                        };
+
+
+                    },
 
 
 
-createCalendar();
+                    eventClick: function(info) {
 
 
-}
+                        let html = "";
 
-});
+                        let states =
+                        info.event.extendedProps.details;
 
 
-function createCalendar(){
 
-  let months = [
-    {
-    id:"september",
-    date:"2026-09-01"
-    },
-    {
-    id:"october",
-    date:"2026-10-01"
-    },
-    {
-    id:"november",
-    date:"2026-11-01"
+                        Object.keys(states).forEach(state => {
+
+
+                            html += `<h2>${state}</h2>`;
+
+
+
+                            states[state].forEach(item => {
+
+
+                                html += `
+
+                                    <p>
+
+                                        <strong>
+                                            ${item["Registration Type"]}
+                                        </strong>
+
+                                        <br>
+
+                                        Deadline:
+                                        ${item.Deadline}
+
+                                        <br>
+
+                                        ${item.Notes || ""}
+
+                                        <br>
+
+                                        <a href="${item.Link}" target="_blank">
+                                            Register here
+                                        </a>
+
+                                    </p>
+
+                                `;
+
+
+                            });
+
+
+                        });
+
+
+
+                        document.getElementById("popupText").innerHTML = html;
+
+                        document.getElementById("popup").style.display = "block";
+
+
+                    }
+
+
+                }
+
+            );
+
+
+            calendar.render();
+
+
+        });
+
+
     }
-  ];
-  
-  
-  months.forEach(month=>{
-  
-  
-  let calendar =
-    new FullCalendar.Calendar(
-    document.getElementById(month.id),
-  {
-  
-  
-  initialView:"dayGridMonth",
-  
-  initialDate:month.date,
-  
-  
-  headerToolbar:false,
-  
-  
-  height:"auto",
-  
-  
-  dayMaxEvents:true,
-  
-  
-  events:Object.keys(deadlineData).map(date=>({
-  
-  title:
-    Object.keys(deadlineData[date]).join("\n"),
-  
-  start:date,
-  
-  extendedProps:{
-    details:deadlineData[date]
-  }
-  
-  })),
-  
-  
-  eventContent:function(arg){
-  
-  return {
-  
-  html:
-    arg.event.title.replace(/\n/g,"<br>")
-  
-  };
-  
-  },
-  
-  
-  eventClick:function(info){
-  
-  
-  let html="";
-  
-  let states =
-    info.event.extendedProps.details;
-    Object.keys(states).forEach(state=>{
-    html += "<h2>"+state+"</h2>";
-    states[state].forEach(item=>{
-    html +=
-    `
-    <p>
-    
-    <strong>${item["Registration Type"]}</strong>
-    
-    <br>
-    
-    Deadline:
-    ${item.Deadline}
-    
-    <br>
-    
-    ${item.Notes || ""}
-    
-    <br>
-    
-    <a href="${item.Link}" target="_blank">
-    Register here
-    </a>
-    
-    </p>
-    
-  `;
-  
-  });
-  
-  });
-  
-  document.getElementById("popupText").innerHTML=html;
-  
-  document.getElementById("popup").style.display="block";
-  
-  }
-  
-  });
-  
-  calendar.render();
-  
-  });
-  
-  }
+
+
+
+    // Close popup
+
+    document.querySelector(".close").onclick = function() {
+
+        document.getElementById("popup").style.display = "none";
+
+    };
 
 
 </script>
+
 
 </body>
 
