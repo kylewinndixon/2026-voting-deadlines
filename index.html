@@ -1,21 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Voter Registration Deadlines</title>
 
-    <!-- Calendar library -->
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
-
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <!-- Reads the published Google Sheet CSV -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-
     <style>
-
         /* =========================
-           Site Colors
+           Customizable colors/layout
         ========================= */
 
         :root {
@@ -25,494 +22,933 @@
             --gold: #F4B942;
             --charcoal: #1F2430;
             --muted-text: #505761;
+
+            --calendar-border: #D8D3C4;
+            --day-background: #FFFFFF;
+
+            /* Change this to increase/decrease space between months */
+            --month-gap: 34px;
+
+            /* Registration-type colors */
+            --online-color: var(--red);
+            --mail-color: var(--gold);
+            --in-person-color: var(--blue);
         }
 
-
-        /* =========================
-           Main Layout
-        ========================= */
+        * {
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: var(--cream);
-            color: var(--charcoal);
-        }
-
-
-        #calendar-container {
-            max-width: 1200px;
-            margin: auto;
-        }
-
-
-        #september,
-        #october,
-        #november {
-        
-            background: white;
-        
+            margin: 0;
             padding: 20px;
-        
-            margin-bottom: 40px;
-        
-            border-radius: 15px;
-        
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--charcoal);
+            background: var(--cream);
         }
 
+        button,
+        a {
+            font: inherit;
+        }
 
         /* =========================
-           Popup Window
+           Main calendar layout
+        ========================= */
+
+        #calendar-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .weekday-header,
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+
+        .weekday-header {
+            margin-bottom: 8px;
+            color: var(--charcoal);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .weekday-name {
+            padding: 9px 4px;
+        }
+
+        .month-section {
+            margin-bottom: var(--month-gap);
+        }
+
+        .month-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .month-title {
+            margin: 0 0 10px;
+            color: var(--charcoal);
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .month-grid {
+            border-top: 1px solid var(--calendar-border);
+            border-left: 1px solid var(--calendar-border);
+        }
+
+        /* Actual days belonging to the displayed month */
+        .calendar-day {
+            min-height: 130px;
+            padding: 8px;
+            overflow: hidden;
+            background: var(--day-background);
+            border-right: 1px solid var(--calendar-border);
+            border-bottom: 1px solid var(--calendar-border);
+        }
+
+        /*
+         * Empty positions before/after a month.
+         * These contain no date and have no visible calendar border.
+         */
+        .calendar-placeholder {
+            min-height: 130px;
+            background: var(--charcoal);
+            border: 0;
+        }
+
+        .day-number {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--muted-text);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .state-list {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        /*
+         * State names are buttons.
+         * Their text color reflects the registration types on that date.
+         */
+        .state-button {
+            display: block;
+            width: 100%;
+            padding: 0;
+            overflow: hidden;
+            color: var(--blue);
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1.25;
+            text-align: left;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .state-button:hover,
+        .state-button:focus-visible {
+            text-decoration: underline;
+        }
+
+        /*
+         * When a state has multiple deadline types on the same date,
+         * its name receives a multicolor gradient.
+         */
+        .state-button.multicolor {
+            color: transparent;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .loading-message,
+        .error-message {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .error-message {
+            color: var(--red);
+            font-weight: 700;
+        }
+
+        /* =========================
+           Popup
         ========================= */
 
         .modal {
             display: none;
             position: fixed;
             z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,.5);
+            inset: 0;
+            padding: 24px;
+            overflow-y: auto;
+            background: rgba(31, 36, 48, 0.65);
         }
 
+        .modal.is-open {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
 
         .modal-content {
-            background: var(--cream);
-            margin: 5% auto;
-            padding: 25px;
-            width: 80%;
-            max-width: 600px;
-            max-height: 75vh;
+            position: relative;
+            width: min(100%, 620px);
+            max-height: calc(100vh - 48px);
+            margin: auto;
+            padding: 28px;
             overflow-y: auto;
-            border-radius: 10px;
+            background: var(--cream);
+            border-radius: 12px;
+            box-shadow: 0 18px 50px rgba(31, 36, 48, 0.25);
         }
 
-
-        .close {
-            float: right;
-            font-size: 24px;
+        .close-button {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            color: var(--charcoal);
+            background: transparent;
+            border: 0;
+            border-radius: 50%;
             cursor: pointer;
+            font-size: 1.7rem;
+            line-height: 1;
         }
 
-
-        /* =========================
-           Registration Type Colors
-        ========================= */
-
-        .online {
-            background: var(--red);
+        .close-button:hover,
+        .close-button:focus-visible {
+            background: rgba(31, 36, 48, 0.08);
         }
 
-
-        .mail {
-            background: var(--gold);
+        .popup-state {
+            margin: 0 42px 4px 0;
+            color: var(--charcoal);
+            font-size: 1.65rem;
         }
 
-
-        .inperson {
-            background: var(--charcoal);
+        .popup-date {
+            margin: 0 0 22px;
+            color: var(--muted-text);
+            font-size: 0.95rem;
         }
 
-
-        .badge {
-
-            display: inline-block;
-        
-            color: white;
-        
-            padding: 4px 8px;
-        
-            border-radius: 5px;
-        
-            margin-right: 5px;
-        
-            font-size: 12px;
-        
-            font-weight: bold;
-        
-        }
-        
-        
-        
         .deadline-entry {
-        
-            margin-bottom: 18px;
-        
-            line-height: 1.4;
-        
-        }
-        
-        
-        
-        .deadline-entry a {
-        
-            color: var(--blue);
-        
-            text-decoration: none;
-        
-            font-weight: bold;
-        
-        }
-        
-        
-        
-        .deadline-entry a:hover {
-        
-            color: var(--red);
-        
-        }
-        
-        
-        
-        .notes {
-        
-            color: var(--muted-text);
-        
-            font-size: 14px;
-        
+            --type-color: var(--blue);
+
+            margin-bottom: 16px;
+            padding: 13px 14px;
+            background: rgba(255, 255, 255, 0.65);
+            border-left: 5px solid var(--type-color);
+            border-radius: 7px;
         }
 
+        .deadline-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .deadline-heading {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .deadline-badge {
+            display: inline-block;
+            padding: 4px 9px;
+            color: white;
+            background: var(--type-color);
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+
+        .deadline-badge.mail-badge {
+            color: var(--charcoal);
+        }
+
+        .more-info-link {
+            color: var(--blue);
+            font-size: 0.88rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .more-info-link:hover,
+        .more-info-link:focus-visible {
+            color: var(--red);
+            text-decoration: underline;
+        }
+
+        .deadline-date {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .deadline-notes {
+            margin: 4px 0 0;
+            color: var(--muted-text);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
 
         /* =========================
-           Calendar Styling
+           Mobile adjustments
         ========================= */
 
-        .fc {
-            --fc-border-color: #D8D3C4;
+        @media (max-width: 750px) {
+            body {
+                padding: 10px;
+            }
+
+            .weekday-name {
+                font-size: 0.7rem;
+            }
+
+            .month-title {
+                font-size: 1.15rem;
+            }
+
+            .calendar-day,
+            .calendar-placeholder {
+                min-height: 95px;
+            }
+
+            .calendar-day {
+                padding: 5px;
+            }
+
+            .day-number {
+                margin-bottom: 4px;
+                font-size: 0.75rem;
+            }
+
+            .state-list {
+                gap: 3px;
+            }
+
+            .state-button {
+                font-size: 0.68rem;
+            }
+
+            .modal {
+                padding: 12px;
+            }
+
+            .modal-content {
+                max-height: calc(100vh - 24px);
+                padding: 22px 18px;
+            }
         }
-
-
-        .fc-daygrid-day-number {
-            color: var(--muted-text);
-        }
-
-
-        .fc-event {
-            background: var(--blue);
-            border: none;
-        }
-
-
-        .fc-event:hover {
-            background: var(--red);
-        }
-
-
-        .fc-day-today {
-            background: var(--cream) !important;
-        }
-
     </style>
-
 </head>
 
-
 <body>
+    <main id="calendar-container">
+        <div class="loading-message">Loading registration deadlines…</div>
+    </main>
 
-
-    <!-- Three month calendars -->
-
-    <div id="calendar-container">
-
-        <div id="september"></div>
-
-        <div id="october"></div>
-
-        <div id="november"></div>
-
-    </div>
-
-
-
-    <!-- Popup -->
-
-    <div id="popup" class="modal">
-
+    <div
+        id="popup"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="popup-state"
+    >
         <div class="modal-content">
+            <button
+                id="close-popup"
+                class="close-button"
+                type="button"
+                aria-label="Close popup"
+            >
+                &times;
+            </button>
 
-            <span class="close">&times;</span>
-
-            <div id="popupText"></div>
-
+            <div id="popup-content"></div>
         </div>
-
     </div>
 
+    <script>
+        /* =========================
+           Customizable calendar dates
+        ========================= */
 
+        /*
+         * lastDay controls how much of each month is displayed.
+         *
+         * September and October use null, meaning the full month.
+         * November uses 7, meaning only November 1–7 appears.
+         */
+        const displayedMonths = [
+            {
+                year: 2026,
+                month: 8,
+                name: "September 2026",
+                lastDay: null
+            },
+            {
+                year: 2026,
+                month: 9,
+                name: "October 2026",
+                lastDay: null
+            },
+            {
+                year: 2026,
+                month: 10,
+                name: "November 2026",
+                lastDay: 7
+            }
+        ];
 
-<script>
+        const csvURL =
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
 
-    // =========================
-    // Load spreadsheet data
-    // =========================
+        const weekdayNames = [
+            "Sun",
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat"
+        ];
 
+        const deadlineData = {};
 
-    const csvURL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
+        Papa.parse(csvURL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
 
+            complete(results) {
+                processSpreadsheetRows(results.data);
+                renderCalendar();
+            },
 
-    let deadlineData = {};
+            error(error) {
+                console.error("CSV loading error:", error);
+                showLoadingError();
+            }
+        });
 
+        /* =========================
+           Spreadsheet processing
+        ========================= */
 
-    Papa.parse(csvURL, {
+        function processSpreadsheetRows(rows) {
+            rows.forEach(row => {
+                const state = String(row.State || "").trim();
+                const registrationType = String(
+                    row["Registration Type"] || ""
+                ).trim();
+                const deadline = String(row.Deadline || "").trim();
 
-        download: true,
-
-        header: true,
-
-
-        complete: function(results) {
-
-
-            results.data.forEach(row => {
-
-
-                if (!row.State || !row.Deadline) {
+                if (!state || !registrationType || !deadline) {
                     return;
                 }
 
+                const parsedDate = parseSpreadsheetDate(deadline);
 
-                let date = new Date(row.Deadline);
-
-                let key = date.toISOString().split("T")[0];
-
-
-                if (!deadlineData[key]) {
-                    deadlineData[key] = {};
+                if (!parsedDate) {
+                    console.warn("Skipped invalid deadline:", deadline, row);
+                    return;
                 }
 
+                const dateKey = createDateKey(
+                    parsedDate.year,
+                    parsedDate.month,
+                    parsedDate.day
+                );
 
-                if (!deadlineData[key][row.State]) {
-                    deadlineData[key][row.State] = [];
+                if (!deadlineData[dateKey]) {
+                    deadlineData[dateKey] = {};
                 }
 
+                if (!deadlineData[dateKey][state]) {
+                    deadlineData[dateKey][state] = [];
+                }
 
-                deadlineData[key][row.State].push(row);
-
-
+                deadlineData[dateKey][state].push({
+                    ...row,
+                    State: state,
+                    "Registration Type": registrationType,
+                    Deadline: deadline
+                });
             });
-
-
-            createCalendar();
-
         }
 
-    });
-
-
-
-    // =========================
-    // Create calendars
-    // =========================
-
-
-    function createCalendar() {
-
-
-        let months = [
-                {
-                    id: "september",
-                    date: "2026-09-01",
-                    showHeader: true
-                },
-            
-                {
-                    id: "october",
-                    date: "2026-10-01",
-                    showHeader: false
-                },
-            
-                {
-                    id: "november",
-                    date: "2026-11-01",
-                    showHeader: false
-                }
-            
-            ];
-
-
-
-        months.forEach(month => {
-
-
-            let calendar =
-            new FullCalendar.Calendar(
-
-                document.getElementById(month.id),
-
-                {
-
-
-                    initialView: "dayGridMonth",
-
-                    initialDate: month.date,
-                    
-                    headerToolbar: false,
-                    
-                    dayHeaderFormat: month.showHeader ? { weekday: "short" } : false,
-                                        
-                    height: "auto",
-                    
-                    showNonCurrentDates: false,
-                    
-                    fixedWeekCount: false,
-                    
-                    dayMaxEvents: true,
-
-
-
-                    events: Object.keys(deadlineData).map(date => ({
-
-
-                        title:
-                        Object.keys(deadlineData[date]).join("\n"),
-
-
-                        start: date,
-
-
-                        extendedProps: {
-
-                            details: deadlineData[date]
-
-                        }
-
-
-                    })),
-
-
-
-                    eventContent: function(arg) {
-
-
-                        return {
-
-                            html:
-                            arg.event.title.replace(/\n/g, "<br>")
-
-                        };
-
-
-                    },
-
-
-
-                    eventClick: function(info) {
-
-
-                        let html = "";
-
-                        let states =
-                        info.event.extendedProps.details;
-
-
-
-                        Object.keys(states).forEach(state => {
-
-
-                            html += `<h2>${state}</h2>`;
-
-
-
-                            states[state].forEach(item => {
-
-                                let type = item["Registration Type"];
-                            
-                                let colorClass = "";
-                            
-                            
-                                if (type.toLowerCase() === "online") {
-                                    colorClass = "online";
-                                }
-                            
-                                else if (type.toLowerCase() === "mail") {
-                                    colorClass = "mail";
-                                }
-                            
-                                else if (type.toLowerCase() === "in person") {
-                                    colorClass = "inperson";
-                                }
-                            
-                            
-                            
-                                html += `
-                            
-                                    <div class="deadline-entry">
-                            
-                                        <span class="badge ${colorClass}">
-                                            ${type}
-                                        </span>
-                            
-                                        <a href="${item.Link}" target="_blank">
-                                            (More Info)
-                                        </a>
-                            
-                            
-                                        <br>
-                            
-                                        <strong>
-                                            Deadline:
-                                        </strong>
-                                        ${item.Deadline}
-                            
-                            
-                                        ${
-                                            item.Notes
-                                            ?
-                                            `<br><span class="notes">${item.Notes}</span>`
-                                            :
-                                            ""
-                                        }
-                            
-                            
-                                    </div>
-                            
-                                `;
-                            
-                            
-                            });
-
-
-                        });
-
-
-
-                        document.getElementById("popupText").innerHTML = html;
-
-                        document.getElementById("popup").style.display = "block";
-
-
-                    }
-
-
-                }
-
+        /*
+         * Reads dates written as M/D/YYYY or MM/DD/YYYY.
+         * This avoids timezone shifts caused by new Date("10/5/2026").
+         */
+        function parseSpreadsheetDate(value) {
+            const match = value.match(
+                /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/
             );
 
+            if (!match) {
+                return null;
+            }
 
-            calendar.render();
+            const month = Number(match[1]) - 1;
+            const day = Number(match[2]);
+            const year = Number(match[3]);
 
+            const date = new Date(year, month, day);
 
+            if (
+                date.getFullYear() !== year ||
+                date.getMonth() !== month ||
+                date.getDate() !== day
+            ) {
+                return null;
+            }
+
+            return { year, month, day };
+        }
+
+        function createDateKey(year, month, day) {
+            const paddedMonth = String(month + 1).padStart(2, "0");
+            const paddedDay = String(day).padStart(2, "0");
+
+            return `${year}-${paddedMonth}-${paddedDay}`;
+        }
+
+        /* =========================
+           Calendar rendering
+        ========================= */
+
+        function renderCalendar() {
+            const container = document.getElementById(
+                "calendar-container"
+            );
+
+            container.innerHTML = "";
+            container.appendChild(createWeekdayHeader());
+
+            displayedMonths.forEach(monthSettings => {
+                container.appendChild(
+                    createMonthSection(monthSettings)
+                );
+            });
+        }
+
+        function createWeekdayHeader() {
+            const header = document.createElement("div");
+            header.className = "weekday-header";
+
+            weekdayNames.forEach(name => {
+                const weekday = document.createElement("div");
+                weekday.className = "weekday-name";
+                weekday.textContent = name;
+                header.appendChild(weekday);
+            });
+
+            return header;
+        }
+
+        function createMonthSection(settings) {
+            const section = document.createElement("section");
+            section.className = "month-section";
+
+            const title = document.createElement("h2");
+            title.className = "month-title";
+            title.textContent = settings.name;
+
+            const grid = document.createElement("div");
+            grid.className = "month-grid";
+
+            const firstWeekday = new Date(
+                settings.year,
+                settings.month,
+                1
+            ).getDay();
+
+            const naturalLastDay = new Date(
+                settings.year,
+                settings.month + 1,
+                0
+            ).getDate();
+
+            const displayedLastDay =
+                settings.lastDay || naturalLastDay;
+
+            /*
+             * Black placeholder positions before the first date.
+             * These have no date, text, or visible border.
+             */
+            for (let i = 0; i < firstWeekday; i += 1) {
+                grid.appendChild(createPlaceholder());
+            }
+
+            for (
+                let day = 1;
+                day <= displayedLastDay;
+                day += 1
+            ) {
+                grid.appendChild(
+                    createDayCell(
+                        settings.year,
+                        settings.month,
+                        day
+                    )
+                );
+            }
+
+            /*
+             * Add enough black placeholders to finish the final row.
+             * October 2026 naturally ends on Saturday, so it receives none.
+             */
+            const occupiedPositions =
+                firstWeekday + displayedLastDay;
+
+            const trailingPositions =
+                (7 - (occupiedPositions % 7)) % 7;
+
+            for (let i = 0; i < trailingPositions; i += 1) {
+                grid.appendChild(createPlaceholder());
+            }
+
+            section.append(title, grid);
+
+            return section;
+        }
+
+        function createPlaceholder() {
+            const placeholder = document.createElement("div");
+            placeholder.className = "calendar-placeholder";
+            placeholder.setAttribute("aria-hidden", "true");
+
+            return placeholder;
+        }
+
+        function createDayCell(year, month, day) {
+            const dateKey = createDateKey(year, month, day);
+            const states = deadlineData[dateKey] || {};
+
+            const cell = document.createElement("div");
+            cell.className = "calendar-day";
+
+            const number = document.createElement("span");
+            number.className = "day-number";
+            number.textContent = day;
+
+            const stateList = document.createElement("div");
+            stateList.className = "state-list";
+
+            Object.keys(states)
+                .sort((a, b) => a.localeCompare(b))
+                .forEach(state => {
+                    stateList.appendChild(
+                        createStateButton(
+                            dateKey,
+                            state,
+                            states[state]
+                        )
+                    );
+                });
+
+            cell.append(number, stateList);
+
+            return cell;
+        }
+
+        function createStateButton(dateKey, state, entries) {
+            const button = document.createElement("button");
+            const colors = getUniqueTypeColors(entries);
+
+            button.type = "button";
+            button.className = "state-button";
+            button.textContent = state;
+            button.title = `View ${state} registration deadlines`;
+
+            if (colors.length === 1) {
+                button.style.color = colors[0];
+            } else if (colors.length > 1) {
+                button.classList.add("multicolor");
+                button.style.backgroundImage =
+                    createColorGradient(colors);
+            }
+
+            button.addEventListener("click", () => {
+                openStatePopup(dateKey, state, entries);
+            });
+
+            return button;
+        }
+
+        /* =========================
+           Registration-type colors
+        ========================= */
+
+        function normalizeRegistrationType(type) {
+            return String(type)
+                .trim()
+                .toLowerCase()
+                .replace(/[-_]+/g, " ")
+                .replace(/\s+/g, " ");
+        }
+
+        function getTypeColor(type) {
+            const normalizedType =
+                normalizeRegistrationType(type);
+
+            if (normalizedType === "online") {
+                return getCssVariable("--online-color");
+            }
+
+            if (normalizedType === "mail") {
+                return getCssVariable("--mail-color");
+            }
+
+            if (normalizedType === "in person") {
+                return getCssVariable("--in-person-color");
+            }
+
+            return getCssVariable("--muted-text");
+        }
+
+        function getUniqueTypeColors(entries) {
+            return [
+                ...new Set(
+                    entries.map(entry =>
+                        getTypeColor(
+                            entry["Registration Type"]
+                        )
+                    )
+                )
+            ];
+        }
+
+        function createColorGradient(colors) {
+            const segmentSize = 100 / colors.length;
+            const stops = [];
+
+            colors.forEach((color, index) => {
+                const start = index * segmentSize;
+                const end = (index + 1) * segmentSize;
+
+                stops.push(
+                    `${color} ${start}%`,
+                    `${color} ${end}%`
+                );
+            });
+
+            return `linear-gradient(90deg, ${stops.join(", ")})`;
+        }
+
+        function getCssVariable(variableName) {
+            return getComputedStyle(document.documentElement)
+                .getPropertyValue(variableName)
+                .trim();
+        }
+
+        /* =========================
+           Popup
+        ========================= */
+
+        function openStatePopup(dateKey, state, entries) {
+            const popup = document.getElementById("popup");
+            const popupContent = document.getElementById(
+                "popup-content"
+            );
+
+            const sortedEntries = [...entries].sort(
+                compareRegistrationTypes
+            );
+
+            const dateLabel = formatDateKey(dateKey);
+
+            let html = `
+                <h2 id="popup-state" class="popup-state">
+                    ${escapeHTML(state)}
+                </h2>
+
+                <p class="popup-date">
+                    ${escapeHTML(dateLabel)}
+                </p>
+            `;
+
+            sortedEntries.forEach(item => {
+                const type = item["Registration Type"];
+                const normalizedType =
+                    normalizeRegistrationType(type);
+                const color = getTypeColor(type);
+
+                const mailBadgeClass =
+                    normalizedType === "mail"
+                        ? "mail-badge"
+                        : "";
+
+                const notes = String(item.Notes || "").trim();
+
+                html += `
+                    <div
+                        class="deadline-entry"
+                        style="--type-color: ${color};"
+                    >
+                        <div class="deadline-heading">
+                            <span
+                                class="deadline-badge ${mailBadgeClass}"
+                            >
+                                ${escapeHTML(formatTypeName(type))}
+                            </span>
+
+                            <a
+                                class="more-info-link"
+                                href="${escapeAttribute(item.Link)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                (More Info)
+                            </a>
+                        </div>
+
+                        <p class="deadline-date">
+                            <strong>Deadline:</strong>
+                            ${escapeHTML(item.Deadline)}
+                        </p>
+
+                        ${
+                            notes
+                                ? `
+                                    <p class="deadline-notes">
+                                        ${escapeHTML(notes)}
+                                    </p>
+                                `
+                                : ""
+                        }
+                    </div>
+                `;
+            });
+
+            popupContent.innerHTML = html;
+            popup.classList.add("is-open");
+
+            document.body.style.overflow = "hidden";
+
+            document.getElementById("close-popup").focus();
+        }
+
+        function compareRegistrationTypes(a, b) {
+            const typeOrder = {
+                online: 1,
+                mail: 2,
+                "in person": 3
+            };
+
+            const firstType = normalizeRegistrationType(
+                a["Registration Type"]
+            );
+
+            const secondType = normalizeRegistrationType(
+                b["Registration Type"]
+            );
+
+            return (
+                (typeOrder[firstType] || 99) -
+                (typeOrder[secondType] || 99)
+            );
+        }
+
+        function formatTypeName(type) {
+            return normalizeRegistrationType(type)
+                .split(" ")
+                .map(word =>
+                    word.charAt(0).toUpperCase() +
+                    word.slice(1)
+                )
+                .join(" ");
+        }
+
+        function formatDateKey(dateKey) {
+            const [year, month, day] =
+                dateKey.split("-").map(Number);
+
+            return new Intl.DateTimeFormat("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric"
+            }).format(new Date(year, month - 1, day));
+        }
+
+        function closePopup() {
+            const popup = document.getElementById("popup");
+
+            popup.classList.remove("is-open");
+            document.body.style.overflow = "";
+        }
+
+        document
+            .getElementById("close-popup")
+            .addEventListener("click", closePopup);
+
+        document
+            .getElementById("popup")
+            .addEventListener("click", event => {
+                if (event.target.id === "popup") {
+                    closePopup();
+                }
+            });
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                closePopup();
+            }
         });
 
+        /* =========================
+           Error handling
+        ========================= */
 
-    }
+        function showLoadingError() {
+            document.getElementById(
+                "calendar-container"
+            ).innerHTML = `
+                <div class="error-message">
+                    The registration deadlines could not be loaded.
+                    Please refresh the page.
+                </div>
+            `;
+        }
 
+        /*
+         * Escapes spreadsheet text before adding it to popup HTML.
+         */
+        function escapeHTML(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
 
-
-    // Close popup
-
-    document.querySelector(".close").onclick = function() {
-
-        document.getElementById("popup").style.display = "none";
-
-    };
-
-
-</script>
-
-
+        function escapeAttribute(value) {
+            return escapeHTML(String(value || "").trim());
+        }
+    </script>
 </body>
 
 </html>
