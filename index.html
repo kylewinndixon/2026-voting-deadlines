@@ -109,11 +109,61 @@
 
 
         .badge {
+
+            display: inline-block;
+        
             color: white;
+        
             padding: 4px 8px;
+        
             border-radius: 5px;
+        
             margin-right: 5px;
+        
             font-size: 12px;
+        
+            font-weight: bold;
+        
+        }
+        
+        
+        
+        .deadline-entry {
+        
+            margin-bottom: 18px;
+        
+            line-height: 1.4;
+        
+        }
+        
+        
+        
+        .deadline-entry a {
+        
+            color: var(--blue);
+        
+            text-decoration: none;
+        
+            font-weight: bold;
+        
+        }
+        
+        
+        
+        .deadline-entry a:hover {
+        
+            color: var(--red);
+        
+        }
+        
+        
+        
+        .notes {
+        
+            color: var(--muted-text);
+        
+            font-size: 14px;
+        
         }
 
 
@@ -353,35 +403,60 @@
 
                             states[state].forEach(item => {
 
-
+                                let type = item["Registration Type"];
+                            
+                                let colorClass = "";
+                            
+                            
+                                if (type.toLowerCase() === "online") {
+                                    colorClass = "online";
+                                }
+                            
+                                else if (type.toLowerCase() === "mail") {
+                                    colorClass = "mail";
+                                }
+                            
+                                else if (type.toLowerCase() === "in person") {
+                                    colorClass = "inperson";
+                                }
+                            
+                            
+                            
                                 html += `
-
-                                    <p>
-
-                                        <strong>
-                                            ${item["Registration Type"]}
-                                        </strong>
-
-                                        <br>
-
-                                        Deadline:
-                                        ${item.Deadline}
-
-                                        <br>
-
-                                        ${item.Notes || ""}
-
-                                        <br>
-
+                            
+                                    <div class="deadline-entry">
+                            
+                                        <span class="badge ${colorClass}">
+                                            ${type}
+                                        </span>
+                            
                                         <a href="${item.Link}" target="_blank">
-                                            Register here
+                                            (More Info)
                                         </a>
-
-                                    </p>
-
+                            
+                            
+                                        <br>
+                            
+                                        <strong>
+                                            Deadline:
+                                        </strong>
+                                        ${item.Deadline}
+                            
+                            
+                                        ${
+                                            item.Notes
+                                            ?
+                                            `<br><span class="notes">${item.Notes}</span>`
+                                            :
+                                            ""
+                                        }
+                            
+                            
+                                    </div>
+                            
                                 `;
-
-
+                            
+                            
                             });
 
 
