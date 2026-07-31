@@ -62,24 +62,9 @@
             margin: 0 auto;
         }
 
-        .weekday-header,
         .month-grid {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
-        }
-
-        .weekday-header {
-            margin-bottom: 8px;
-            color: var(--charcoal);
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .weekday-name {
-            padding: 9px 4px;
         }
 
         .month-section {
@@ -90,16 +75,10 @@
             margin-bottom: 0;
         }
 
-        .month-title {
-            margin: 0 0 10px;
-            color: var(--charcoal);
-            font-size: 1.35rem;
-            font-weight: 700;
-        }
-
         .month-grid {
-            border-top: 1px solid var(--calendar-border);
-            border-left: 1px solid var(--calendar-border);
+            overflow: hidden;
+            border: 1px solid var(--calendar-border);
+            border-radius: 10px;
         }
 
         /* Actual days belonging to the displayed month */
@@ -111,14 +90,17 @@
             border-right: 1px solid var(--calendar-border);
             border-bottom: 1px solid var(--calendar-border);
         }
-
+        
+        .calendar-day:hover {
+            background: rgba(242, 238, 223, 0.45);
+        }
         /*
          * Empty positions before/after a month.
          * These contain no date and have no visible calendar border.
          */
         .calendar-placeholder {
             min-height: 130px;
-            background: var(--charcoal);
+            background: transparent;
             border: 0;
         }
 
@@ -144,34 +126,41 @@
         .state-button {
             display: block;
             width: 100%;
-            padding: 0;
+            padding: 3px 0;
             overflow: hidden;
-            color: var(--blue);
+            color: var(--charcoal);
             background: transparent;
             border: 0;
             cursor: pointer;
+            text-align: left;
+        }
+        
+        .state-name {
+            display: block;
+            overflow: hidden;
             font-size: 0.82rem;
             font-weight: 700;
-            line-height: 1.25;
-            text-align: left;
+            line-height: 1.2;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .state-button:hover,
-        .state-button:focus-visible {
+        
+        .state-button:hover .state-name,
+        .state-button:focus-visible .state-name {
+            color: var(--blue);
             text-decoration: underline;
         }
-
-        /*
-         * When a state has multiple deadline types on the same date,
-         * its name receives a multicolor gradient.
-         */
-        .state-button.multicolor {
-            color: transparent;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        
+        .type-markers {
+            display: flex;
+            gap: 4px;
+            margin-top: 3px;
+        }
+        
+        .type-marker {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
         }
 
         .loading-message,
@@ -321,14 +310,6 @@
                 padding: 10px;
             }
 
-            .weekday-name {
-                font-size: 0.7rem;
-            }
-
-            .month-title {
-                font-size: 1.15rem;
-            }
-
             .calendar-day,
             .calendar-placeholder {
                 min-height: 95px;
@@ -423,16 +404,6 @@
 
         const csvURL =
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
-
-        const weekdayNames = [
-            "Sun",
-            "Mon",
-            "Tue",
-            "Wed",
-            "Thu",
-            "Fri",
-            "Sat"
-        ];
 
         const deadlineData = {};
 
@@ -543,10 +514,9 @@
             const container = document.getElementById(
                 "calendar-container"
             );
-
+        
             container.innerHTML = "";
-            container.appendChild(createWeekdayHeader());
-
+        
             displayedMonths.forEach(monthSettings => {
                 container.appendChild(
                     createMonthSection(monthSettings)
@@ -554,27 +524,9 @@
             });
         }
 
-        function createWeekdayHeader() {
-            const header = document.createElement("div");
-            header.className = "weekday-header";
-
-            weekdayNames.forEach(name => {
-                const weekday = document.createElement("div");
-                weekday.className = "weekday-name";
-                weekday.textContent = name;
-                header.appendChild(weekday);
-            });
-
-            return header;
-        }
-
         function createMonthSection(settings) {
             const section = document.createElement("section");
             section.className = "month-section";
-
-            const title = document.createElement("h2");
-            title.className = "month-title";
-            title.textContent = settings.name;
 
             const grid = document.createElement("div");
             grid.className = "month-grid";
@@ -630,8 +582,8 @@
                 grid.appendChild(createPlaceholder());
             }
 
-            section.append(title, grid);
-
+            section.appendChild(grid);
+           
             return section;
         }
 
@@ -676,25 +628,34 @@
 
         function createStateButton(dateKey, state, entries) {
             const button = document.createElement("button");
+            const stateName = document.createElement("span");
+            const markerContainer = document.createElement("span");
             const colors = getUniqueTypeColors(entries);
-
+        
             button.type = "button";
             button.className = "state-button";
-            button.textContent = state;
             button.title = `View ${state} registration deadlines`;
-
-            if (colors.length === 1) {
-                button.style.color = colors[0];
-            } else if (colors.length > 1) {
-                button.classList.add("multicolor");
-                button.style.backgroundImage =
-                    createColorGradient(colors);
-            }
-
+        
+            stateName.className = "state-name";
+            stateName.textContent = state;
+        
+            markerContainer.className = "type-markers";
+        
+            colors.forEach(color => {
+                const marker = document.createElement("span");
+        
+                marker.className = "type-marker";
+                marker.style.backgroundColor = color;
+        
+                markerContainer.appendChild(marker);
+            });
+        
+            button.append(stateName, markerContainer);
+        
             button.addEventListener("click", () => {
                 openStatePopup(dateKey, state, entries);
             });
-
+        
             return button;
         }
 
@@ -739,23 +700,6 @@
                     )
                 )
             ];
-        }
-
-        function createColorGradient(colors) {
-            const segmentSize = 100 / colors.length;
-            const stops = [];
-
-            colors.forEach((color, index) => {
-                const start = index * segmentSize;
-                const end = (index + 1) * segmentSize;
-
-                stops.push(
-                    `${color} ${start}%`,
-                    `${color} ${end}%`
-                );
-            });
-
-            return `linear-gradient(90deg, ${stops.join(", ")})`;
         }
 
         function getCssVariable(variableName) {
