@@ -500,30 +500,7 @@
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
 
         const deadlineData = {};
-
-        /* ==================================================
-           LOAD THE GOOGLE SHEET
-        ================================================== */
-
-        Papa.parse(csvURL, {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-
-            complete(results) {
-                processSpreadsheetRows(results.data);
-                renderCalendar();
-            },
-
-            error(error) {
-                console.error("CSV loading error:", error);
-                showLoadingError();
-            }
-        });
-
-        /* ==================================================
-           PROCESS SPREADSHEET ROWS
-        ================================================== */
+        
         const stateAbbreviations = {
             Alabama: "AL",
             Alaska: "AK",
@@ -577,7 +554,30 @@
             Wisconsin: "WI",
             Wyoming: "WY"
         };
+        
+        /* ==================================================
+           LOAD THE GOOGLE SHEET
+        ================================================== */
 
+        Papa.parse(csvURL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+
+            complete(results) {
+                processSpreadsheetRows(results.data);
+                renderCalendar();
+            },
+
+            error(error) {
+                console.error("CSV loading error:", error);
+                showLoadingError();
+            }
+        });
+
+        /* ==================================================
+           PROCESS SPREADSHEET ROWS
+        ================================================== */
         
         function processSpreadsheetRows(rows) {
             rows.forEach(row => {
