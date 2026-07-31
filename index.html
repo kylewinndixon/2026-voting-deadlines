@@ -46,11 +46,18 @@
         }
 
 
-        .month-calendar {
+        #september,
+        #october,
+        #november {
+        
             background: white;
+        
             padding: 20px;
-            margin-bottom: 35px;
+        
+            margin-bottom: 40px;
+        
             border-radius: 15px;
+        
         }
 
 
@@ -71,7 +78,7 @@
 
 
         .modal-content {
-            background: white;
+            background: var(--cream);
             margin: 5% auto;
             padding: 25px;
             width: 80%;
@@ -304,23 +311,25 @@
 
 
         let months = [
-
-            {
-                id: "september",
-                date: "2026-09-01"
-            },
-
-            {
-                id: "october",
-                date: "2026-10-01"
-            },
-
-            {
-                id: "november",
-                date: "2026-11-01"
-            }
-
-        ];
+                {
+                    id: "september",
+                    date: "2026-09-01",
+                    showHeader: true
+                },
+            
+                {
+                    id: "october",
+                    date: "2026-10-01",
+                    showHeader: false
+                },
+            
+                {
+                    id: "november",
+                    date: "2026-11-01",
+                    showHeader: false
+                }
+            
+            ];
 
 
 
@@ -338,12 +347,17 @@
                     initialView: "dayGridMonth",
 
                     initialDate: month.date,
-
-
+                    
                     headerToolbar: false,
-
+                    
+                    dayHeaderFormat: month.showHeader ? { weekday: "short" } : false,
+                                        
                     height: "auto",
-
+                    
+                    showNonCurrentDates: false,
+                    
+                    fixedWeekCount: false,
+                    
                     dayMaxEvents: true,
 
 
