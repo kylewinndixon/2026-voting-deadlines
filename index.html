@@ -7,15 +7,17 @@
 
     <title>Voter Registration Deadlines</title>
 
-    <!-- Reads the published Google Sheet CSV -->
+    <!-- Converts the published Google Sheet CSV into usable data -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <style>
-        /* =========================
-           Customizable colors/layout
-        ========================= */
+        /* ==================================================
+           CUSTOMIZABLE SETTINGS
+           Most visual changes can be made here.
+        ================================================== */
 
         :root {
+            /* Stanford Votes palette */
             --cream: #F2EEDF;
             --blue: #5D8AA8;
             --red: #DE5452;
@@ -23,28 +25,36 @@
             --charcoal: #1F2430;
             --muted-text: #505761;
 
-            --calendar-border: #D8D3C4;
+            /* Calendar appearance */
             --day-background: #FFFFFF;
-
-            /* Change this to increase/decrease space between months */
+            --day-border: #D8D3C4;
+            --day-radius: 6px;
+            --day-gap: 5px;
             --month-gap: 34px;
+            --day-height: 130px;
 
-            /* Registration-type colors */
+            /* Deadline-type colors */
             --online-color: var(--red);
             --mail-color: var(--gold);
             --in-person-color: var(--blue);
+            --election-day-color: var(--red);
+            --other-color: var(--muted-text);
         }
 
         * {
             box-sizing: border-box;
         }
 
+        html {
+            background: var(--cream);
+        }
+
         body {
             margin: 0;
             padding: 20px;
-            font-family: Arial, Helvetica, sans-serif;
             color: var(--charcoal);
             background: var(--cream);
+            font-family: Arial, Helvetica, sans-serif;
         }
 
         button,
@@ -52,19 +62,14 @@
             font: inherit;
         }
 
-        /* =========================
-           Main calendar layout
-        ========================= */
+        /* ==================================================
+           CALENDAR LAYOUT
+        ================================================== */
 
         #calendar-container {
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-        }
-
-        .month-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
         }
 
         .month-section {
@@ -75,27 +80,43 @@
             margin-bottom: 0;
         }
 
-        /* Actual days belonging to the displayed month */
+        /*
+         * There is no border or rounded outline around an entire month.
+         * Only actual date cells have borders.
+         */
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: var(--day-gap);
+        }
+
         .calendar-day {
-            min-height: 130px;
+            min-width: 0;
+            min-height: var(--day-height);
             padding: 8px;
             overflow: hidden;
             background: var(--day-background);
-            border-right: 1px solid var(--calendar-border);
-            border-bottom: 1px solid var(--calendar-border);
+            border: 1px solid var(--day-border);
+            border-radius: var(--day-radius);
+            transition:
+                background 140ms ease,
+                border-color 140ms ease;
         }
-        
+
         .calendar-day:hover {
-            background: rgba(242, 238, 223, 0.45);
+            background: rgba(242, 238, 223, 0.55);
+            border-color: var(--blue);
         }
+
         /*
-         * Empty positions before/after a month.
-         * These contain no date and have no visible calendar border.
+         * Empty spaces preserve the correct weekday positions.
+         * They have no background, border, date, or content.
          */
         .calendar-placeholder {
-            min-height: 130px;
+            min-height: var(--day-height);
             background: transparent;
             border: 0;
+            pointer-events: none;
         }
 
         .day-number {
@@ -106,29 +127,29 @@
             font-weight: 700;
         }
 
+        /* ==================================================
+           STATES AND TYPE MARKERS
+        ================================================== */
+
         .state-list {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: stretch;
             gap: 5px;
         }
 
-        /*
-         * State names are buttons.
-         * Their text color reflects the registration types on that date.
-         */
         .state-button {
             display: block;
             width: 100%;
-            padding: 3px 0;
-            overflow: hidden;
+            min-width: 0;
+            padding: 2px 0;
             color: var(--charcoal);
             background: transparent;
             border: 0;
             cursor: pointer;
             text-align: left;
         }
-        
+
         .state-name {
             display: block;
             overflow: hidden;
@@ -138,39 +159,66 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .state-button:hover .state-name,
         .state-button:focus-visible .state-name {
             color: var(--blue);
             text-decoration: underline;
         }
-        
+
+        .state-button:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+            border-radius: 3px;
+        }
+
         .type-markers {
             display: flex;
+            flex-wrap: wrap;
             gap: 4px;
             margin-top: 3px;
         }
-        
+
         .type-marker {
             width: 8px;
             height: 8px;
+            flex: 0 0 auto;
             border-radius: 50%;
         }
 
-        .loading-message,
-        .error-message {
-            padding: 30px;
+        /* ==================================================
+           ELECTION DAY
+        ================================================== */
+
+        .calendar-day.election-day {
+            background: rgba(244, 185, 66, 0.2);
+            border: 2px solid var(--gold);
+        }
+
+        .calendar-day.election-day:hover {
+            background: rgba(244, 185, 66, 0.3);
+            border-color: var(--red);
+        }
+
+        .election-day .day-number {
+            color: var(--red);
+        }
+
+        .election-banner {
+            margin-bottom: 7px;
+            padding: 4px 6px;
+            color: white;
+            background: var(--red);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1.2;
             text-align: center;
         }
 
-        .error-message {
-            color: var(--red);
-            font-weight: 700;
-        }
-
-        /* =========================
-           Popup
-        ========================= */
+        /* ==================================================
+           POPUP
+        ================================================== */
 
         .modal {
             display: none;
@@ -234,11 +282,11 @@
         }
 
         .deadline-entry {
-            --type-color: var(--blue);
+            --type-color: var(--other-color);
 
             margin-bottom: 16px;
             padding: 13px 14px;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.68);
             border-left: 5px solid var(--type-color);
             border-radius: 7px;
         }
@@ -251,7 +299,7 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
             margin-bottom: 6px;
         }
 
@@ -263,10 +311,12 @@
             border-radius: 5px;
             font-size: 0.8rem;
             font-weight: 700;
-            text-transform: capitalize;
         }
 
-        .deadline-badge.mail-badge {
+        /*
+         * Gold is light, so mail badges use dark text.
+         */
+        .deadline-badge.dark-text {
             color: var(--charcoal);
         }
 
@@ -289,41 +339,74 @@
         }
 
         .deadline-notes {
-            margin: 4px 0 0;
+            margin: 5px 0 0;
             color: var(--muted-text);
             font-size: 0.9rem;
-            line-height: 1.4;
+            line-height: 1.5;
+            white-space: pre-line;
         }
 
-        /* =========================
-           Mobile adjustments
-        ========================= */
+        /* ==================================================
+           STATUS MESSAGES
+        ================================================== */
+
+        .loading-message,
+        .error-message {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .error-message {
+            color: var(--red);
+            font-weight: 700;
+        }
+
+        /* ==================================================
+           MOBILE
+        ================================================== */
 
         @media (max-width: 750px) {
+            :root {
+                --day-height: 95px;
+                --day-gap: 3px;
+                --month-gap: 25px;
+            }
+
             body {
                 padding: 10px;
             }
 
-            .calendar-day,
-            .calendar-placeholder {
-                min-height: 95px;
-            }
-
             .calendar-day {
                 padding: 5px;
+                border-radius: 4px;
             }
 
             .day-number {
                 margin-bottom: 4px;
-                font-size: 0.75rem;
+                font-size: 0.72rem;
             }
 
             .state-list {
                 gap: 3px;
             }
 
-            .state-button {
-                font-size: 0.68rem;
+            .state-name {
+                font-size: 0.66rem;
+            }
+
+            .type-markers {
+                gap: 3px;
+                margin-top: 2px;
+            }
+
+            .type-marker {
+                width: 6px;
+                height: 6px;
+            }
+
+            .election-banner {
+                padding: 3px;
+                font-size: 0.58rem;
             }
 
             .modal {
@@ -335,60 +418,14 @@
                 padding: 22px 18px;
             }
         }
-        
-        .election-day {
-            background: rgba(244, 185, 66, 0.18);
-        }
-        
-        .election-day .day-number {
-            color: var(--red);
-            font-weight: bold;
-        }
-
-        .election-banner {
-            margin-bottom: 6px;
-            padding: 3px 6px;
-        
-            background: var(--red);
-            color: white;
-        
-            border-radius: 4px;
-        
-            font-size: 0.7rem;
-            font-weight: bold;
-        
-            text-align: center;
-        }
-        .election-info {
-
-            margin-bottom: 20px;
-            padding: 16px;
-        
-            background: rgba(244, 185, 66, 0.18);
-        
-            border-left: 5px solid var(--gold);
-        
-            border-radius: 8px;
-        
-        }
-        
-        .election-info h3 {
-            margin-top: 0;
-            color: var(--red);
-        }
-        
-        .election-info ul {
-            margin: 10px 0 0;
-            padding-left: 20px;
-            columns: 2;
-        }
-        
     </style>
 </head>
 
 <body>
     <main id="calendar-container">
-        <div class="loading-message">Loading registration deadlines…</div>
+        <div class="loading-message">
+            Loading registration deadlines…
+        </div>
     </main>
 
     <div
@@ -413,63 +450,60 @@
     </div>
 
     <script>
-        /* =========================
-           Customizable calendar dates
-        ========================= */
+        /* ==================================================
+           CALENDAR SETTINGS
+        ================================================== */
 
         /*
-         * lastDay controls how much of each month is displayed.
+         * JavaScript months use zero-based numbering:
          *
-         * September and October use null, meaning the full month.
-         * November uses 7, meaning only November 1–7 appears.
+         * 8  = September
+         * 9  = October
+         * 10 = November
+         *
+         * Set lastDay to null to display the full month.
+         * Set it to a number to stop early.
          */
         const displayedMonths = [
             {
                 year: 2026,
                 month: 8,
-                name: "September 2026",
                 lastDay: null
             },
             {
                 year: 2026,
                 month: 9,
-                name: "October 2026",
                 lastDay: null
             },
             {
                 year: 2026,
                 month: 10,
-                name: "November 2026",
                 lastDay: 7
             }
         ];
 
+        /*
+         * Special dates receive extra calendar styling.
+         * Additional dates can be added later using the same format.
+         */
+        const specialDates = {
+            "2026-11-03": {
+                label: "Election Day",
+                className: "election-day"
+            }
+        };
+
+        /*
+         * Published CSV link for the Calendar Data tab.
+         */
         const csvURL =
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
 
-        const sameDayRegistrationStates = [
-            "Colorado",
-            "Connecticut",
-            "District of Columbia",
-            "Hawaii",
-            "Iowa",
-            "Maine",
-            "Maryland",
-            "Michigan",
-            "Minnesota",
-            "Montana",
-            "Nevada",
-            "New Hampshire",
-            "North Dakota",
-            "Utah",
-            "Vermont",
-            "Virginia",
-            "Washington",
-            "Wisconsin",
-            "Wyoming"
-        ];
-        
         const deadlineData = {};
+
+        /* ==================================================
+           LOAD THE GOOGLE SHEET
+        ================================================== */
 
         Papa.parse(csvURL, {
             download: true,
@@ -487,16 +521,18 @@
             }
         });
 
-        /* =========================
-           Spreadsheet processing
-        ========================= */
+        /* ==================================================
+           PROCESS SPREADSHEET ROWS
+        ================================================== */
 
         function processSpreadsheetRows(rows) {
             rows.forEach(row => {
                 const state = String(row.State || "").trim();
+
                 const registrationType = String(
                     row["Registration Type"] || ""
                 ).trim();
+
                 const deadline = String(row.Deadline || "").trim();
 
                 if (!state || !registrationType || !deadline) {
@@ -506,7 +542,12 @@
                 const parsedDate = parseSpreadsheetDate(deadline);
 
                 if (!parsedDate) {
-                    console.warn("Skipped invalid deadline:", deadline, row);
+                    console.warn(
+                        "Skipped row with invalid deadline:",
+                        deadline,
+                        row
+                    );
+
                     return;
                 }
 
@@ -534,8 +575,8 @@
         }
 
         /*
-         * Reads dates written as M/D/YYYY or MM/DD/YYYY.
-         * This avoids timezone shifts caused by new Date("10/5/2026").
+         * Reads Google Sheet dates in M/D/YYYY or MM/DD/YYYY format.
+         * Parsing the numbers manually prevents timezone date shifts.
          */
         function parseSpreadsheetDate(value) {
             const match = value.match(
@@ -550,17 +591,21 @@
             const day = Number(match[2]);
             const year = Number(match[3]);
 
-            const date = new Date(year, month, day);
+            const testDate = new Date(year, month, day);
 
             if (
-                date.getFullYear() !== year ||
-                date.getMonth() !== month ||
-                date.getDate() !== day
+                testDate.getFullYear() !== year ||
+                testDate.getMonth() !== month ||
+                testDate.getDate() !== day
             ) {
                 return null;
             }
 
-            return { year, month, day };
+            return {
+                year,
+                month,
+                day
+            };
         }
 
         function createDateKey(year, month, day) {
@@ -570,22 +615,24 @@
             return `${year}-${paddedMonth}-${paddedDay}`;
         }
 
-        /* =========================
-           Calendar rendering
-        ========================= */
+        /* ==================================================
+           RENDER THE CALENDAR
+        ================================================== */
 
         function renderCalendar() {
             const container = document.getElementById(
                 "calendar-container"
             );
-        
+
             container.innerHTML = "";
-        
+
             displayedMonths.forEach(monthSettings => {
                 container.appendChild(
                     createMonthSection(monthSettings)
                 );
             });
+
+            notifyParentOfHeight();
         }
 
         function createMonthSection(settings) {
@@ -608,11 +655,13 @@
             ).getDate();
 
             const displayedLastDay =
-                settings.lastDay || naturalLastDay;
+                settings.lastDay === null
+                    ? naturalLastDay
+                    : settings.lastDay;
 
             /*
-             * Black placeholder positions before the first date.
-             * These have no date, text, or visible border.
+             * Add invisible spaces before the first date so each
+             * date remains in its correct Sunday–Saturday column.
              */
             for (let i = 0; i < firstWeekday; i += 1) {
                 grid.appendChild(createPlaceholder());
@@ -633,8 +682,7 @@
             }
 
             /*
-             * Add enough black placeholders to finish the final row.
-             * October 2026 naturally ends on Saturday, so it receives none.
+             * Complete the last row with invisible spaces.
              */
             const occupiedPositions =
                 firstWeekday + displayedLastDay;
@@ -642,17 +690,22 @@
             const trailingPositions =
                 (7 - (occupiedPositions % 7)) % 7;
 
-            for (let i = 0; i < trailingPositions; i += 1) {
+            for (
+                let i = 0;
+                i < trailingPositions;
+                i += 1
+            ) {
                 grid.appendChild(createPlaceholder());
             }
 
             section.appendChild(grid);
-           
+
             return section;
         }
 
         function createPlaceholder() {
             const placeholder = document.createElement("div");
+
             placeholder.className = "calendar-placeholder";
             placeholder.setAttribute("aria-hidden", "true");
 
@@ -662,36 +715,37 @@
         function createDayCell(year, month, day) {
             const dateKey = createDateKey(year, month, day);
             const states = deadlineData[dateKey] || {};
+            const specialDate = specialDates[dateKey];
 
             const cell = document.createElement("div");
             cell.className = "calendar-day";
+
+            if (specialDate) {
+                cell.classList.add(specialDate.className);
+            }
 
             const number = document.createElement("span");
             number.className = "day-number";
             number.textContent = day;
 
-            const isElectionDay =
-                year === 2026 &&
-                month === 10 &&
-                day === 3;
-            
-            if (isElectionDay) {
-                cell.classList.add("election-day");
-                
+            cell.appendChild(number);
+
+            if (specialDate) {
                 const banner = document.createElement("div");
 
                 banner.className = "election-banner";
-            
-                banner.textContent = "Election Day";
-            
+                banner.textContent = specialDate.label;
+
                 cell.appendChild(banner);
             }
-            
+
             const stateList = document.createElement("div");
             stateList.className = "state-list";
 
             Object.keys(states)
-                .sort((a, b) => a.localeCompare(b))
+                .sort((first, second) =>
+                    first.localeCompare(second)
+                )
                 .forEach(state => {
                     stateList.appendChild(
                         createStateButton(
@@ -702,7 +756,7 @@
                     );
                 });
 
-            cell.append(number, stateList);
+            cell.appendChild(stateList);
 
             return cell;
         }
@@ -710,39 +764,45 @@
         function createStateButton(dateKey, state, entries) {
             const button = document.createElement("button");
             const stateName = document.createElement("span");
-            const markerContainer = document.createElement("span");
-            const colors = getUniqueTypeColors(entries);
-        
+            const markerContainer =
+                document.createElement("span");
+
             button.type = "button";
             button.className = "state-button";
-            button.title = `View ${state} registration deadlines`;
-        
+            button.title =
+                `View ${state} registration deadlines`;
+
             stateName.className = "state-name";
             stateName.textContent = state;
-        
+
             markerContainer.className = "type-markers";
-        
-            colors.forEach(color => {
+
+            getUniqueTypeStyles(entries).forEach(typeStyle => {
                 const marker = document.createElement("span");
-        
+
                 marker.className = "type-marker";
-                marker.style.backgroundColor = color;
-        
+                marker.style.backgroundColor = typeStyle.color;
+                marker.title = typeStyle.label;
+                marker.setAttribute(
+                    "aria-label",
+                    typeStyle.label
+                );
+
                 markerContainer.appendChild(marker);
             });
-        
+
             button.append(stateName, markerContainer);
-        
+
             button.addEventListener("click", () => {
                 openStatePopup(dateKey, state, entries);
             });
-        
+
             return button;
         }
 
-        /* =========================
-           Registration-type colors
-        ========================= */
+        /* ==================================================
+           REGISTRATION-TYPE APPEARANCE
+        ================================================== */
 
         function normalizeRegistrationType(type) {
             return String(type)
@@ -752,58 +812,100 @@
                 .replace(/\s+/g, " ");
         }
 
-        function getTypeColor(type) {
+        function getTypeStyle(type) {
             const normalizedType =
                 normalizeRegistrationType(type);
 
-            if (normalizedType === "online") {
-                return getCssVariable("--online-color");
-            }
+            const styles = {
+                online: {
+                    color: getCssVariable("--online-color"),
+                    label: "Online",
+                    darkText: false,
+                    order: 1
+                },
 
-            if (normalizedType === "mail") {
-                return getCssVariable("--mail-color");
-            }
+                mail: {
+                    color: getCssVariable("--mail-color"),
+                    label: "Mail",
+                    darkText: true,
+                    order: 2
+                },
 
-            if (normalizedType === "in person") {
-                return getCssVariable("--in-person-color");
-            }
+                "in person": {
+                    color: getCssVariable("--in-person-color"),
+                    label: "In Person",
+                    darkText: false,
+                    order: 3
+                },
 
-            return getCssVariable("--muted-text");
+                "election day": {
+                    color: getCssVariable(
+                        "--election-day-color"
+                    ),
+                    label: "Election Day",
+                    darkText: false,
+                    order: 4
+                }
+            };
+
+            return (
+                styles[normalizedType] || {
+                    color: getCssVariable("--other-color"),
+                    label: formatTypeName(type),
+                    darkText: false,
+                    order: 99
+                }
+            );
         }
 
-        function getUniqueTypeColors(entries) {
-            return [
-                ...new Set(
-                    entries.map(entry =>
-                        getTypeColor(
-                            entry["Registration Type"]
-                        )
-                    )
-                )
-            ];
+        function getUniqueTypeStyles(entries) {
+            const uniqueStyles = new Map();
+
+            entries.forEach(entry => {
+                const type =
+                    entry["Registration Type"];
+
+                const normalizedType =
+                    normalizeRegistrationType(type);
+
+                if (!uniqueStyles.has(normalizedType)) {
+                    uniqueStyles.set(
+                        normalizedType,
+                        getTypeStyle(type)
+                    );
+                }
+            });
+
+            return [...uniqueStyles.values()].sort(
+                (first, second) =>
+                    first.order - second.order
+            );
         }
 
         function getCssVariable(variableName) {
-            return getComputedStyle(document.documentElement)
+            return getComputedStyle(
+                document.documentElement
+            )
                 .getPropertyValue(variableName)
                 .trim();
         }
 
-        /* =========================
-           Popup
-        ========================= */
+        /* ==================================================
+           POPUP
+        ================================================== */
 
         function openStatePopup(dateKey, state, entries) {
             const popup = document.getElementById("popup");
+
             const popupContent = document.getElementById(
                 "popup-content"
             );
 
+            const dateLabel = formatDateKey(dateKey);
+
             const sortedEntries = [...entries].sort(
                 compareRegistrationTypes
             );
-
-            const dateLabel = formatDateKey(dateKey);
 
             let html = `
                 <h2 id="popup-state" class="popup-state">
@@ -816,38 +918,46 @@
             `;
 
             sortedEntries.forEach(item => {
-                const type = item["Registration Type"];
-                const normalizedType =
-                    normalizeRegistrationType(type);
-                const color = getTypeColor(type);
+                const typeStyle = getTypeStyle(
+                    item["Registration Type"]
+                );
 
-                const mailBadgeClass =
-                    normalizedType === "mail"
-                        ? "mail-badge"
-                        : "";
+                const notes = String(
+                    item.Notes || ""
+                ).trim();
 
-                const notes = String(item.Notes || "").trim();
+                const safeLink = getSafeLink(item.Link);
 
                 html += `
                     <div
                         class="deadline-entry"
-                        style="--type-color: ${color};"
+                        style="--type-color: ${typeStyle.color};"
                     >
                         <div class="deadline-heading">
                             <span
-                                class="deadline-badge ${mailBadgeClass}"
+                                class="deadline-badge ${
+                                    typeStyle.darkText
+                                        ? "dark-text"
+                                        : ""
+                                }"
                             >
-                                ${escapeHTML(formatTypeName(type))}
+                                ${escapeHTML(typeStyle.label)}
                             </span>
 
-                            <a
-                                class="more-info-link"
-                                href="${escapeAttribute(item.Link)}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                (More Info)
-                            </a>
+                            ${
+                                safeLink
+                                    ? `
+                                        <a
+                                            class="more-info-link"
+                                            href="${escapeAttribute(safeLink)}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            (More Info)
+                                        </a>
+                                    `
+                                    : ""
+                            }
                         </div>
 
                         <p class="deadline-date">
@@ -858,9 +968,7 @@
                         ${
                             notes
                                 ? `
-                                    <p class="deadline-notes">
-                                        ${escapeHTML(notes)}
-                                    </p>
+                                    <p class="deadline-notes">${escapeHTML(notes)}</p>
                                 `
                                 : ""
                         }
@@ -873,50 +981,21 @@
 
             document.body.style.overflow = "hidden";
 
-            document.getElementById("close-popup").focus();
-            
-            if (dateKey === "2026-11-03") {
-            
-                html += `
-                    <div class="election-info">
-            
-                        <h3>Election Day</h3>
-            
-                        <p>
-                            Same-Day Voter Registration is available on Election Day in:
-                        </p>
-            
-                        <ul>
-                            ${sameDayRegistrationStates
-                                .map(state => `<li>${state}</li>`)
-                                .join("")}
-                        </ul>
-            
-                    </div>
-                `;
-            
-            }
+            document
+                .getElementById("close-popup")
+                .focus();
         }
 
-        function compareRegistrationTypes(a, b) {
-            const typeOrder = {
-                online: 1,
-                mail: 2,
-                "in person": 3
-            };
-
-            const firstType = normalizeRegistrationType(
-                a["Registration Type"]
+        function compareRegistrationTypes(first, second) {
+            const firstStyle = getTypeStyle(
+                first["Registration Type"]
             );
 
-            const secondType = normalizeRegistrationType(
-                b["Registration Type"]
+            const secondStyle = getTypeStyle(
+                second["Registration Type"]
             );
 
-            return (
-                (typeOrder[firstType] || 99) -
-                (typeOrder[secondType] || 99)
-            );
+            return firstStyle.order - secondStyle.order;
         }
 
         function formatTypeName(type) {
@@ -937,13 +1016,16 @@
                 month: "long",
                 day: "numeric",
                 year: "numeric"
-            }).format(new Date(year, month - 1, day));
+            }).format(
+                new Date(year, month - 1, day)
+            );
         }
 
         function closePopup() {
-            const popup = document.getElementById("popup");
+            document
+                .getElementById("popup")
+                .classList.remove("is-open");
 
-            popup.classList.remove("is-open");
             document.body.style.overflow = "";
         }
 
@@ -965,9 +1047,44 @@
             }
         });
 
-        /* =========================
-           Error handling
-        ========================= */
+        /* ==================================================
+           WIX EMBED HEIGHT SUPPORT
+        ================================================== */
+
+        /*
+         * This reports the page height to a parent window.
+         * It does not interfere with a normal Wix URL embed.
+         * It can also support a future Velo auto-resizing setup.
+         */
+        function notifyParentOfHeight() {
+            const height =
+                document.documentElement.scrollHeight;
+
+            window.parent.postMessage(
+                {
+                    type: "voter-calendar-height",
+                    height
+                },
+                "*"
+            );
+        }
+
+        if ("ResizeObserver" in window) {
+            const resizeObserver = new ResizeObserver(() => {
+                notifyParentOfHeight();
+            });
+
+            resizeObserver.observe(document.body);
+        }
+
+        window.addEventListener(
+            "load",
+            notifyParentOfHeight
+        );
+
+        /* ==================================================
+           ERROR HANDLING AND SECURITY
+        ================================================== */
 
         function showLoadingError() {
             document.getElementById(
@@ -980,9 +1097,29 @@
             `;
         }
 
-        /*
-         * Escapes spreadsheet text before adding it to popup HTML.
-         */
+        function getSafeLink(value) {
+            const link = String(value || "").trim();
+
+            if (!link) {
+                return "";
+            }
+
+            try {
+                const parsedURL = new URL(link);
+
+                if (
+                    parsedURL.protocol === "https:" ||
+                    parsedURL.protocol === "http:"
+                ) {
+                    return parsedURL.href;
+                }
+            } catch (error) {
+                console.warn("Invalid link skipped:", link);
+            }
+
+            return "";
+        }
+
         function escapeHTML(value) {
             return String(value)
                 .replaceAll("&", "&amp;")
@@ -993,7 +1130,9 @@
         }
 
         function escapeAttribute(value) {
-            return escapeHTML(String(value || "").trim());
+            return escapeHTML(
+                String(value || "").trim()
+            );
         }
     </script>
 </body>
