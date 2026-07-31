@@ -13,9 +13,37 @@
 <style>
 
 body {
+
   font-family: Arial, sans-serif;
-  margin: 20px;
-  background: #ffffff;
+
+  margin:20px;
+
+  background:#F2EEDF;
+
+  color:#1F2430;
+
+}
+
+
+#calendar-container {
+
+  max-width:1200px;
+
+  margin:auto;
+
+}
+
+
+.month-calendar {
+
+  background:white;
+
+  padding:20px;
+
+  margin-bottom:35px;
+
+  border-radius:15px;
+
 }
 
 h1 {
@@ -84,6 +112,48 @@ h1 {
   font-size:12px;
 }
 
+.fc {
+
+  --fc-border-color:#D8D3C4;
+
+}
+
+
+.fc-toolbar-title {
+
+  color:#1F2430;
+
+}
+
+
+.fc-daygrid-day-number {
+
+  color:#505761;
+
+}
+
+
+.fc-event {
+
+  background:#5D8AA8;
+
+  border:none;
+
+}
+
+
+.fc-event:hover {
+
+  background:#DE5452;
+
+}
+
+
+.fc-day-today {
+
+  background:#F2EEDF !important;
+
+}
 
 </style>
 
@@ -92,9 +162,15 @@ h1 {
 
 <body>
 
-<h1>Voter Registration Deadlines</h1>
+<div id="calendar-container">
 
-<div id="calendar"></div>
+<div id="september"></div>
+
+<div id="october"></div>
+
+<div id="november"></div>
+
+</div>
 
 
 <div id="popup" class="modal">
@@ -175,137 +251,128 @@ createCalendar();
 });
 
 
-
-
-
 function createCalendar(){
 
-
-let calendarEl =
-document.getElementById("calendar");
-
-
-
-let calendar =
-new FullCalendar.Calendar(calendarEl, {
-
-
-initialView:"multiMonth",
-
-initialDate:"2026-09-01",
-
-multiMonthMaxColumns:3,
-
-multiMonthMinWidth:300,
-
-views:{
-    multiMonth:{
-        duration:{months:3}
+  let months = [
+    {
+    id:"september",
+    date:"2026-09-01"
+    },
+    {
+    id:"october",
+    date:"2026-10-01"
+    },
+    {
+    id:"november",
+    date:"2026-11-01"
     }
-},
-
-
-events:Object.keys(deadlineData).map(date=>({
-
-title:
-Object.keys(deadlineData[date]).join("\n"),
-
-start:date,
-
-extendedProps:{
-details:deadlineData[date]
-}
-
-
-})),
-
+  ];
+  
+  
+  months.forEach(month=>{
+  
+  
+  let calendar =
+    new FullCalendar.Calendar(
+    document.getElementById(month.id),
+  {
+  
+  
+  initialView:"dayGridMonth",
+  
+  initialDate:month.date,
+  
+  
+  headerToolbar:false,
+  
+  
+  height:"auto",
+  
+  
+  dayMaxEvents:true,
+  
+  
+  events:Object.keys(deadlineData).map(date=>({
+  
+  title:
+    Object.keys(deadlineData[date]).join("\n"),
+  
+  start:date,
+  
+  extendedProps:{
+    details:deadlineData[date]
+  }
+  
+  })),
+  
+  
   eventContent:function(arg){
-
-return {
-    html:
+  
+  return {
+  
+  html:
     arg.event.title.replace(/\n/g,"<br>")
-};
-
-},
-
-eventClick:function(info){
-
-
-let html="";
-
-
-
-let states =
-info.event.extendedProps.details;
-
-
-
-Object.keys(states).forEach(state=>{
-
-
-html += "<h2>"+state+"</h2>";
-
-
-
-states[state].forEach(item=>{
-
-
-html +=
-`
-<p>
-<strong>${item["Registration Type"]}</strong><br>
-
-Deadline:
-${item.Deadline}<br>
-
-${item.Notes || ""}
-
-<br>
-
-<a href="${item.Link}" target="_blank">
-Register here
-</a>
-
-</p>
-`;
-
-});
-
-
-});
-
-
-document.getElementById("popupText").innerHTML=html;
-
-
-document.getElementById("popup").style.display="block";
-
-
-}
-
-
-
-});
-
-
-calendar.render();
-
-
-}
-
-
-
-
-
-document.querySelector(".close").onclick=function(){
-
-document.getElementById("popup").style.display="none";
-
-}
+  
+  };
+  
+  },
+  
+  
+  eventClick:function(info){
+  
+  
+  let html="";
+  
+  let states =
+    info.event.extendedProps.details;
+    Object.keys(states).forEach(state=>{
+    html += "<h2>"+state+"</h2>";
+    states[state].forEach(item=>{
+    html +=
+    `
+    <p>
+    
+    <strong>${item["Registration Type"]}</strong>
+    
+    <br>
+    
+    Deadline:
+    ${item.Deadline}
+    
+    <br>
+    
+    ${item.Notes || ""}
+    
+    <br>
+    
+    <a href="${item.Link}" target="_blank">
+    Register here
+    </a>
+    
+    </p>
+    
+  `;
+  
+  });
+  
+  });
+  
+  document.getElementById("popupText").innerHTML=html;
+  
+  document.getElementById("popup").style.display="block";
+  
+  }
+  
+  });
+  
+  calendar.render();
+  
+  });
+  
+  }
 
 
 </script>
-
 
 </body>
 
