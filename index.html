@@ -75,12 +75,6 @@
             margin-bottom: 0;
         }
 
-        .month-grid {
-            overflow: hidden;
-            border: 1px solid var(--calendar-border);
-            border-radius: 10px;
-        }
-
         /* Actual days belonging to the displayed month */
         .calendar-day {
             min-height: 130px;
@@ -341,6 +335,54 @@
                 padding: 22px 18px;
             }
         }
+        
+        .election-day {
+            background: rgba(244, 185, 66, 0.18);
+        }
+        
+        .election-day .day-number {
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        .election-banner {
+            margin-bottom: 6px;
+            padding: 3px 6px;
+        
+            background: var(--red);
+            color: white;
+        
+            border-radius: 4px;
+        
+            font-size: 0.7rem;
+            font-weight: bold;
+        
+            text-align: center;
+        }
+        .election-info {
+
+            margin-bottom: 20px;
+            padding: 16px;
+        
+            background: rgba(244, 185, 66, 0.18);
+        
+            border-left: 5px solid var(--gold);
+        
+            border-radius: 8px;
+        
+        }
+        
+        .election-info h3 {
+            margin-top: 0;
+            color: var(--red);
+        }
+        
+        .election-info ul {
+            margin: 10px 0 0;
+            padding-left: 20px;
+            columns: 2;
+        }
+        
     </style>
 </head>
 
@@ -405,6 +447,28 @@
         const csvURL =
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vRIAU4CfDAlRhv0zDxdZngiqbdavP3sga8lvqxcinP3gjhvHtM2v6vPJbPGc6PZHCmMLFijZ_oDYrZX/pub?gid=1156287616&single=true&output=csv";
 
+        const sameDayRegistrationStates = [
+            "Colorado",
+            "Connecticut",
+            "District of Columbia",
+            "Hawaii",
+            "Iowa",
+            "Maine",
+            "Maryland",
+            "Michigan",
+            "Minnesota",
+            "Montana",
+            "Nevada",
+            "New Hampshire",
+            "North Dakota",
+            "Utah",
+            "Vermont",
+            "Virginia",
+            "Washington",
+            "Wisconsin",
+            "Wyoming"
+        ];
+        
         const deadlineData = {};
 
         Papa.parse(csvURL, {
@@ -606,6 +670,23 @@
             number.className = "day-number";
             number.textContent = day;
 
+            const isElectionDay =
+                year === 2026 &&
+                month === 10 &&
+                day === 3;
+            
+            if (isElectionDay) {
+                cell.classList.add("election-day");
+                
+                const banner = document.createElement("div");
+
+                banner.className = "election-banner";
+            
+                banner.textContent = "Election Day";
+            
+                cell.appendChild(banner);
+            }
+            
             const stateList = document.createElement("div");
             stateList.className = "state-list";
 
@@ -793,6 +874,28 @@
             document.body.style.overflow = "hidden";
 
             document.getElementById("close-popup").focus();
+            
+            if (dateKey === "2026-11-03") {
+            
+                html += `
+                    <div class="election-info">
+            
+                        <h3>Election Day</h3>
+            
+                        <p>
+                            Same-Day Voter Registration is available on Election Day in:
+                        </p>
+            
+                        <ul>
+                            ${sameDayRegistrationStates
+                                .map(state => `<li>${state}</li>`)
+                                .join("")}
+                        </ul>
+            
+                    </div>
+                `;
+            
+            }
         }
 
         function compareRegistrationTypes(a, b) {
